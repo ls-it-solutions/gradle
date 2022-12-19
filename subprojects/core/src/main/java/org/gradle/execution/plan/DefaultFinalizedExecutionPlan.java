@@ -263,8 +263,8 @@ public class DefaultFinalizedExecutionPlan implements WorkSource<Node>, Finalize
                     node.visitPreExecutionNodes(prepareNode -> {
                         prepareNode.setIndex(node.getIndex());
                         prepareNode.require();
-                        prepareNode.updateAllDependenciesComplete();
                         node.addDependencySuccessor(prepareNode);
+                        prepareNode.updateAllDependenciesComplete();
                         addNodeToPlan(prepareNode);
                     });
                     node.forceAllDependenciesCompleteUpdate();
