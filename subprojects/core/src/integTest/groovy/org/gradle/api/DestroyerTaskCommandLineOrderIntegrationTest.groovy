@@ -455,7 +455,7 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
         rootBuild.task("clean").destroys("build")
 
         def deps = [
-            "foo:writeVersionFiles": [
+            ":foo:writeVersionFiles": [
                 deps: [":writeVersionFiles"],
                 finalizes: [":foo:assemble", ":foo:build", ":foo:distTar", ":foo:distZip", ":foo:jar", ":foo:publishNebulaIvyPublicationToDistIvyRepository", ":foo:sourceJar"]
             ],
@@ -479,9 +479,13 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
                 deps: [],
                 finalizes: [":foo:copyIntegrationTestSrcFiles"]
             ],
+            ":foo:copyIntegrationTestSrcFiles": [
+                deps: [],
+                finalizes: [":foo:classes"]
+            ],
             ":foo:copyIntegrationTestClasses": [
                 deps: [],
-                finalizes: [":foo::deleteIntegrationTestSrcFiles"]
+                finalizes: [":foo:deleteIntegrationTestSrcFiles"]
             ],
             ":foo:jacocoTestReport": [
                 deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava"],
@@ -515,7 +519,7 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
                 deps: [":foo:jar"]
             ],
             ":foo:sourceJar": [
-                deps: [":foo:createPropertiesForJar", ":foo:writeManifestProperties"]
+                deps: []
             ],
             ":foo:assemble": [
                 deps: [":foo:distTar", ":foo:distZip", ":foo:jar", ":foo:sourceJar"]
@@ -548,7 +552,11 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
                 deps: [":foo:compileIntegTestGroovy", ":foo:compileIntegTestJava", ":foo:processIntegTestResources"]
             ],
             ":foo:integrationTest": [
-               deps: [":foo:buildInvocationInfo", ":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses", ":foo:compileIntegTestJava", ":foo:compileIntegTestGroovy", ":foo:integTestClasses", ":foo:installDist"]
+                deps: [":foo:buildInvocationInfo", ":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses", ":foo:compileIntegTestJava", ":foo:compileIntegTestGroovy", ":foo:integTestClasses", ":foo:installDist"]
+            ],
+            ":foo:installDist": [
+                deps: [":foo:jar"],
+                finalizes: [":foo:compileJava", ":foo:copyGeneratedFiles"]
             ],
             ":foo:spotbugsIntegTest": [
                 deps: [":foo:compileIntegTestGroovy", ":foo:compileIntegTestJava", ":foo:integTestClasses"]
@@ -640,7 +648,8 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
                 deps: [":assemble", ":check"]
             ],
             ":writeVersionFiles": [
-                finalizes: [":assemble", ":build", "jar"]
+                deps: [],
+                finalizes: [":assemble", ":build", ":jar"]
             ],
             ":postPublish": [
                 deps: [],
@@ -657,6 +666,9 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
             ":publish": [
                 deps: [":build", ":postPublish", ":preparePublish", ":publishBuildInfoToArtifactory"]
             ],
+            ":prepare": [
+                deps: []
+            ],
             ":release": [
                 deps: [":prepare", ":foo:build"]
             ],
@@ -666,10 +678,44 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
             ":postRelease": [
                 deps: [":publish", ":release", ":foo:generateDescriptorFileForNebulaIvyPublication", ":foo:generatePomFileForNebulaPublication", ":foo:publish"],
             ],
+            ":verifyPublicationReport": [
+                deps: []
+            ]
         ]
 
         expect:
         (deps.values()*.deps.flatten() - deps.keySet()).isEmpty()
+        (deps.values().collect { it.finalizes ?: [] }.flatten() - deps.keySet()).isEmpty()
+        (deps.values().collect { it.mustRunAfter ?: [] }.flatten() - deps.keySet()).isEmpty()
+
+        when:
+        ProjectFixture fooProject = subproject(':foo')
+        fooProject.task("clean").destroys("build")
+        ProjectFixture rootProject = subproject(':')
+        Map<String, TaskFixture> tasks = [:]
+        deps.keySet().each { taskPath ->
+            def project = taskPath.startsWith(':foo:') ? fooProject : rootProject
+            def taskName = taskPath.startsWith(':foo:') ? taskPath.substring(5) : taskPath.substring(1)
+            tasks[taskPath.toString()] = project.task(taskName)
+        }
+        deps.each { taskPath, data ->
+            TaskFixture currentTask = tasks[taskPath.toString()]
+            data.deps.each { currentTask.dependsOn(tasks[it]) }
+            data.finalizes?.each { tasks[it].finalizedBy(currentTask) }
+            data.mustRunAfter?.each { currentTask.mustRunAfter(tasks[it]) }
+            if (currentTask.name.startsWith("compile")) {
+                currentTask.outputs("build/${currentTask.name}/classes")
+            }
+        }
+        tasks[':foo:copyIntegrationTestClasses'].outputs("build/integrationTest/classes")
+        tasks[':foo:copyIntegrationTestSrcFiles'].outputs("build/test/classes")
+        tasks[':foo:deleteIntegrationTestSrcFiles'].destroys("build/compileIntegTestJava/classes")
+        tasks[':foo:deleteIntegrationTestClassesInMain'].destroys("build/compileJava/classes")
+
+        writeAllFiles()
+
+        then:
+        succeeds("clean", "check", "devSnapshot")
 
 //        def installDist = rootBuild.task("installDist").outputs("build/install")
 //        def copyClasses = rootBuild.task("copyClasses").outputs("build/copied-classes")
