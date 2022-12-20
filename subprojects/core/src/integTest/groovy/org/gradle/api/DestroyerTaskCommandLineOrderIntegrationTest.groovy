@@ -18,6 +18,7 @@ package org.gradle.api
 
 
 import org.gradle.integtests.fixtures.executer.TaskOrderSpecs
+import spock.lang.IgnoreRest
 import spock.lang.Issue
 
 class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOrderTaskIntegrationTest {
@@ -447,5 +448,255 @@ class DestroyerTaskCommandLineOrderIntegrationTest extends AbstractCommandLineOr
 
         where:
         type << ProductionType.values()
+    }
+
+    @IgnoreRest
+    def "complicated setup works"() {
+        rootBuild.task("clean").destroys("build")
+
+        def deps = [
+            "foo:writeVersionFiles": [
+                deps: [":writeVersionFiles"],
+                finalizes: [":foo:assemble", ":foo:build", ":foo:distTar", ":foo:distZip", ":foo:jar", ":foo:publishNebulaIvyPublicationToDistIvyRepository", ":foo:sourceJar"]
+            ],
+            ":foo:compileJava": [
+                deps: []
+            ],
+            ":foo:compileGroovy": [
+                deps: [":foo:compileJava"]
+            ],
+            ":foo:processResources": [
+                deps: []
+            ],
+            ":foo:classes": [
+                deps: [":foo:compileJava", ":foo:processResources"]
+            ],
+            ":foo:deleteIntegrationTestClassesInMain": [
+                deps: [],
+                finalizes: [":foo:copyIntegrationTestClasses"]
+            ],
+            ":foo:deleteIntegrationTestSrcFiles": [
+                deps: [],
+                finalizes: [":foo:copyIntegrationTestSrcFiles"]
+            ],
+            ":foo:copyIntegrationTestClasses": [
+                deps: [],
+                finalizes: [":foo::deleteIntegrationTestSrcFiles"]
+            ],
+            ":foo:jacocoTestReport": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava"],
+                mustRunAfter: [":foo:test"]
+            ],
+            ":foo:copyGeneratedFiles": [
+                deps: [],
+                finalizes: [":foo:deleteIntegrationTestClassesInMain"]
+            ],
+            ":devSnapshot": [
+                deps: [":devSnapshotSetup", ":postRelease"]
+            ],
+            ":devSnapshotSetup": [
+                deps: [":releaseCheck"]
+            ],
+            ":releaseCheck": [
+                deps: []
+            ],
+            ":jacocoTestReport": [
+                deps: [":classes", ":compileJava"],
+                mustRunAfter: [":test"]
+            ],
+            // More
+            ":foo:jar": [
+                deps: [":foo:classes", ":foo:compileJava"]
+            ],
+            ":foo:distTar": [
+                deps: [":foo:jar"]
+            ],
+            ":foo:distZip": [
+                deps: [":foo:jar"]
+            ],
+            ":foo:sourceJar": [
+                deps: [":foo:createPropertiesForJar", ":foo:writeManifestProperties"]
+            ],
+            ":foo:assemble": [
+                deps: [":foo:distTar", ":foo:distZip", ":foo:jar", ":foo:sourceJar"]
+            ],
+            ":foo:buildInvocationInfo": [
+                deps: []
+            ],
+            ":foo:compileTestJava": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava"]
+            ],
+            ":foo:compileTestGroovy": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava"]
+            ],
+            ":foo:processTestResources": [
+                deps: []
+            ],
+            ":foo:testClasses": [
+                deps: [":foo:compileTestGroovy", ":foo:compileTestJava", ":foo:processTestResources"]
+            ],
+            ":foo:compileIntegTestJava": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses"]
+            ],
+            ":foo:compileIntegTestGroovy": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses", ":foo:compileIntegTestJava"]
+            ],
+            ":foo:processIntegTestResources": [
+                deps: []
+            ],
+            ":foo:integTestClasses": [
+                deps: [":foo:compileIntegTestGroovy", ":foo:compileIntegTestJava", ":foo:processIntegTestResources"]
+            ],
+            ":foo:integrationTest": [
+               deps: [":foo:buildInvocationInfo", ":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses", ":foo:compileIntegTestJava", ":foo:compileIntegTestGroovy", ":foo:integTestClasses", ":foo:installDist"]
+            ],
+            ":foo:spotbugsIntegTest": [
+                deps: [":foo:compileIntegTestGroovy", ":foo:compileIntegTestJava", ":foo:integTestClasses"]
+            ],
+            ":foo:spotbugsMain": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava"]
+            ],
+            ":foo:spotbugsTest": [
+                deps: [":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses"]
+            ],
+            ":foo:test": [
+                deps: [":foo:buildInvocationInfo", ":foo:classes", ":foo:compileGroovy", ":foo:compileJava", ":foo:compileTestJava", ":foo:compileTestGroovy", ":foo:testClasses"]
+            ],
+            ":foo:check": [
+                deps: [":foo:integrationTest", ":foo:spotbugsIntegTest", ":foo:spotbugsMain", ":foo:spotbugsTest", ":foo:test"]
+            ],
+            ":foo:build": [
+                deps: [":foo:assemble", ":foo:check", ":foo:integTestClasses"]
+            ],
+            ":foo:generateDescriptorFileForNebulaIvyPublication": [
+                deps: []
+            ],
+            ":foo:generateMetadataFileForNebulaIvyPublication": [
+                deps: [":foo:jar", ":foo:sourceJar"]
+            ],
+            ":foo:publishNebulaIvyPublicationToDistIvyRepository": [
+                deps: [":verifyPublicationReport", ":foo:generateDescriptorFileForNebulaIvyPublication", ":foo:generateMetadataFileForNebulaIvyPublication", ":foo:jar", ":foo:sourceJar"]
+            ],
+            ":foo:generateMetadataFileForNebulaPublication": [
+                deps: [":foo:jar", ":foo:sourceJar"]
+            ],
+            ":foo:generatePomFileForNebulaPublication": [
+                deps: []
+            ],
+            ":preparePublish": [
+                deps: [],
+                mustRunAfter: [":foo:build"]
+            ],
+            ":foo:publishNebulaPublicationToLibsSnapshotsLocalPomRepository": [
+                deps: [":verifyPublicationReport", ":foo:generateMetadataFileForNebulaPublication", ":foo:generatePomFileForNebulaPublication", ":foo:jar", ":foo:sourceJar"],
+                mustRunAfter: [":preparePublish"]
+            ],
+            ":compileJava": [
+                deps: []
+            ],
+            ":processResources": [
+                deps: []
+            ],
+            ":classes": [
+                deps: [":compileJava", ":processResources"]
+            ],
+            ":createPropertiesFileForJar": [
+                deps: []
+            ],
+            ":writeManifestProperties": [
+                deps: []
+            ],
+            ":jar": [
+                deps: [":classes", ":compileJava", ":createPropertiesFileForJar", ":writeManifestProperties"]
+            ],
+            ":assemble": [
+                deps: [":jar"]
+            ],
+            ":spotbugsMain": [
+                deps: [":classes", ":compileJava"]
+            ],
+            ":compileTestJava": [
+                deps: [":classes", ":compileJava"]
+            ],
+            ":processTestResources": [
+                deps: []
+            ],
+            ":testClasses": [
+                deps: [":compileTestJava", ":processTestResources"]
+            ],
+            ":spotbugsTest": [
+                deps: [":classes", ":compileJava", ":compileTestJava", ":testClasses"]
+            ],
+            ":buildInvocationInfo": [
+                deps: []
+            ],
+            ":test": [
+                deps: [":buildInvocationInfo", ":classes", ":compileJava", ":compileTestJava", ":testClasses"]
+            ],
+            ":check": [
+                deps: [":spotbugsMain", ":spotbugsTest", ":test"]
+            ],
+            ":build": [
+                deps: [":assemble", ":check"]
+            ],
+            ":writeVersionFiles": [
+                finalizes: [":assemble", ":build", "jar"]
+            ],
+            ":postPublish": [
+                deps: [],
+                mustRunAfter: [":foo:publishNebulaIvyPublicationToDistIvyRepository", ":foo:publishNebulaPublicationToLibsSnapshotsLocalPomRepository"]
+            ],
+            ":confirmPublication": [
+                deps: [],
+                mustRunAfter: [":postPublish"]
+            ],
+            ":publishBuildInfoToArtifactory": [
+                deps: [":confirmPublication"],
+                mustRunAfter: [":postPublish"]
+            ],
+            ":publish": [
+                deps: [":build", ":postPublish", ":preparePublish", ":publishBuildInfoToArtifactory"]
+            ],
+            ":release": [
+                deps: [":prepare", ":foo:build"]
+            ],
+            ":foo:publish": [
+                deps: [":postPublish", ":preparePublish", ":foo:build", ":foo:publishNebulaIvyPublicationToDistIvyRepository", ":foo:publishNebulaPublicationToLibsSnapshotsLocalPomRepository"]
+            ],
+            ":postRelease": [
+                deps: [":publish", ":release", ":foo:generateDescriptorFileForNebulaIvyPublication", ":foo:generatePomFileForNebulaPublication", ":foo:publish"],
+            ],
+        ]
+
+        expect:
+        (deps.values()*.deps.flatten() - deps.keySet()).isEmpty()
+
+//        def installDist = rootBuild.task("installDist").outputs("build/install")
+//        def copyClasses = rootBuild.task("copyClasses").outputs("build/copied-classes")
+//        def copySources = rootBuild.task("copySources").outputs("build/copied-sources")
+//        def deleteClasses = rootBuild.task("deleteClasses").destroys("build/classes")
+//        def deleteSources = rootBuild.task("deleteSources").destroys("build/generated/src")
+//        def compileJava = rootBuild.task("compileJava")
+//            .outputs("build/classes")
+//            .outputs("build/generated/src")
+//            .finalizedBy(copyClasses)
+//        def jar = rootBuild.task("jar").outputs("build/libs").dependsOn(compileJava)
+//        copyClasses.finalizedBy(deleteClasses)
+//        deleteClasses.finalizedBy(copySources)
+//        copySources.finalizedBy(deleteSources)
+//        installDist.dependsOn(jar)
+//        compileJava.finalizedBy(installDist)
+//        copyClasses.finalizedBy(installDist)
+//        rootBuild.task("integTest").dependsOn(compileJava)
+//
+//        rootBuild.task("copyFiles").outputs("build/copied-files")
+//
+//        writeAllFiles()
+//
+//        expect:
+//        args '--parallel', '--configuration-cache', '--max-workers=2'
+//        succeeds "clean", "installDist", "integTest"
+//        args '--parallel', '--configuration-cache', '--max-workers=2'
+//        succeeds "clean", "installDist", "integTest"
     }
 }
