@@ -174,7 +174,6 @@ class ToolingApiIntegrationTest extends AbstractIntegrationSpec {
         notThrown(Throwable)
     }
 
-    @IgnoreIf({ isEmbedded() })
     def "can specify a gradle installation to use"() {
 
         buildFile << "assert gradle.gradleVersion == '${otherVersion.version.version}'"
@@ -189,7 +188,6 @@ class ToolingApiIntegrationTest extends AbstractIntegrationSpec {
         model != null
     }
 
-    @IgnoreIf({ isEmbedded() })
     def "can specify a gradle distribution to use"() {
         buildFile << "assert gradle.gradleVersion == '${otherVersion.version.version}'"
 
@@ -203,7 +201,6 @@ class ToolingApiIntegrationTest extends AbstractIntegrationSpec {
         model != null
     }
 
-    @IgnoreIf({ isEmbedded() })
     def "can specify a gradle version to use"() {
         buildFile << "assert gradle.gradleVersion == '${otherVersion.version.version}'"
 
