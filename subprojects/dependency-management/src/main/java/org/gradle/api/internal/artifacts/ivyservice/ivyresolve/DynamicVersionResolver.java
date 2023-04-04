@@ -484,6 +484,7 @@ public class DynamicVersionResolver {
             return cachePolicy;
         }
 
+        @SuppressWarnings("deprecation")
         private void process(ModuleComponentRepositoryAccess access, DefaultBuildableModuleComponentMetaDataResolveResult result) {
             DependencyMetadata dependency = dependencyMetadata.withRequestedVersion(new DefaultImmutableVersionConstraint(version.getSource()));
             IvyArtifactName firstArtifact = dependency.getArtifacts().isEmpty() ? null : dependency.getArtifacts().get(0);
