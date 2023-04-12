@@ -1169,6 +1169,7 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
     }
 
     @Override
+    @Deprecated
     public void beforeLocking(Action<? super ConfigurationInternal> action) {
         if (canBeMutated) {
             if (beforeLocking != null) {
