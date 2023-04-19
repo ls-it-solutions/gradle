@@ -132,6 +132,7 @@ tasks {
         description = "Runs Smoke tests against the Gradle build"
         configureForSmokeTest(gradleBuildCurrent.map {
             project.fileTree(it.outputDirectory) {
+                exclude("platforms/*/*/src/**")
                 exclude("subprojects/*/src/**")
                 exclude(".idea/**")
                 exclude(".github/**")

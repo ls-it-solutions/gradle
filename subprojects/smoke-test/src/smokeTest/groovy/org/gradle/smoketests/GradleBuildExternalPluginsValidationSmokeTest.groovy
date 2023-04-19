@@ -18,6 +18,7 @@ package org.gradle.smoketests
 
 import org.gradle.integtests.fixtures.executer.GradleContextualExecuter
 import org.gradle.internal.reflect.validation.ValidationMessageChecker
+import org.gradle.test.fixtures.file.TestFile
 import org.gradle.util.Requires
 import org.gradle.util.TestPrecondition
 
@@ -31,12 +32,35 @@ import org.gradle.util.TestPrecondition
 class GradleBuildExternalPluginsValidationSmokeTest extends AbstractGradleceptionSmokeTest implements WithPluginValidation, ValidationMessageChecker {
 
     def setup() {
-        allPlugins.projectPathToBuildDir = {
-            if (it == ':') {
-                'build'
+        ProjectBuildDirLocator locator = (String projectPath, TestFile projectRoot) -> {
+            if (projectPath == ':') {
+                projectRoot.file("build")
             } else {
-                "subprojects${it.split(':').join('/')}/build"
+                def projectDir = projectPath.split(':').join('/')
+
+                // Search in `subprojects` first.
+                def subprojectsPath = projectRoot.file("subprojects").file(projectDir).file("build")
+
+                if (subprojectsPath.exists()) {
+                    return subprojectsPath
+                }
+
+                // Otherwise, it might exist in a platform.
+                for (TestFile platformDir : projectRoot.file("platforms").listFiles()) {
+                    def platformPath = platformDir.file(projectDir).file("build")
+                    if (platformPath.exists()) {
+                        return platformPath
+                    }
+                }
+
+                throw new IllegalArgumentException("Cannot find build dir for project path '$projectPath'")
             }
+        }
+
+        // Cache this since this gets called multiple times per project path.
+        Map<String, TestFile> locations = new HashMap<>()
+        allPlugins.projectPathToBuildDir = (String projectPath, TestFile projectRoot) -> {
+            locations.computeIfAbsent(projectPath, path -> locator.getBuildDir(path, projectRoot))
         }
     }
 

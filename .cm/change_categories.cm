@@ -201,7 +201,7 @@ platforms:
     name: 'jvm'
     subprojects:
       - 'subprojects/code-quality/'
-      - 'subprojects/ear/'
+      - 'platforms/jvm/ear/'
       - 'subprojects/jacoco/'
       - 'subprojects/java-compiler-plugin/'
       - 'subprojects/jvm-services/'
