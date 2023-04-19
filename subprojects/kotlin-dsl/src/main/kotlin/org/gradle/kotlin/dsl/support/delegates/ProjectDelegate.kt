@@ -103,6 +103,8 @@ abstract class ProjectDelegate : Project {
     override fun getLogger(): Logger =
         delegate.logger
 
+    @Suppress("DEPRECATION")
+    @Deprecated("Use layout.buildDirectory instead", ReplaceWith("layout.buildDirectory.get()"))
     override fun getBuildDir(): File =
         delegate.buildDir
 
@@ -241,10 +243,14 @@ abstract class ProjectDelegate : Project {
     override fun components(configuration: Action<in SoftwareComponentContainer>) =
         delegate.components(configuration)
 
+    @Deprecated("Use layout.buildDirectory instead", ReplaceWith("layout.buildDirectory.set(path)"))
     override fun setBuildDir(path: File) {
+        @Suppress("DEPRECATION")
         delegate.buildDir = path
     }
 
+    @Suppress("DEPRECATION")
+    @Deprecated("Use layout.buildDirectory instead", ReplaceWith("layout.buildDirectory.set(file(path))"))
     override fun setBuildDir(path: Any) =
         delegate.setBuildDir(path)
 
