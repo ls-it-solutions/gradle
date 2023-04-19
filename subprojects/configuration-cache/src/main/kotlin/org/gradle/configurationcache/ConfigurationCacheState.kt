@@ -773,7 +773,7 @@ class ConfigurationCacheState(
             val mutableModel = project.mutableModel
             if (relevantProjects.contains(project)) {
                 mutableModel.layout.buildDirectory.finalizeValue()
-                ProjectWithWork(project.projectPath, mutableModel.projectDir, mutableModel.buildFile, mutableModel.buildDir, mutableModel.normalization.computeCachedState())
+                ProjectWithWork(project.projectPath, mutableModel.projectDir, mutableModel.buildFile, mutableModel.layout.buildDirectory.asFile.get(), mutableModel.normalization.computeCachedState())
             } else {
                 ProjectWithNoWork(project.projectPath, mutableModel.projectDir, mutableModel.buildFile)
             }
