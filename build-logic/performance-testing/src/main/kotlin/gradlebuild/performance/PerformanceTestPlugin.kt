@@ -372,7 +372,7 @@ fun Project.performanceReportZipTaskFor(performanceReport: TaskProvider<out Perf
         from(performanceReport.get().performanceResults) {
             into("perf-results")
         }
-        destinationDirectory = buildDir
+        destinationDirectory = layout.buildDirectory
         archiveFileName = "performance-test-results.zip"
     }
 
