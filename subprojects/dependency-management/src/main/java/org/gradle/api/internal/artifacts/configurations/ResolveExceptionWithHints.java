@@ -24,7 +24,7 @@ import java.util.List;
 
 class ResolveExceptionWithHints extends ResolveException implements ResolutionProvider {
 
-    private List<String> resolutions;
+    private final List<String> resolutions;
 
     public ResolveExceptionWithHints(String resolveContext, Iterable<? extends Throwable> causes, String resolution) {
         super(resolveContext, causes);
