@@ -15,16 +15,27 @@
  */
 package org.gradle.execution;
 
+import com.google.common.collect.ImmutableSet;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.internal.DocumentationRegistry;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.internal.project.ProjectState;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.specs.Spec;
+import org.gradle.internal.execution.WorkValidationContext;
+import org.gradle.internal.execution.WorkValidationException;
+import org.gradle.internal.execution.impl.DefaultWorkValidationContext;
+import org.gradle.internal.reflect.problems.ValidationProblemId;
+import org.gradle.internal.reflect.validation.Severity;
+import org.gradle.internal.reflect.validation.TypeValidationProblem;
+import org.gradle.internal.reflect.validation.TypeValidationProblemRenderer;
 import org.gradle.util.internal.NameMatcher;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class DefaultTaskSelector implements TaskSelector {
@@ -83,11 +94,42 @@ public class DefaultTaskSelector implements TaskSelector {
             }
 
             if (context.getOriginalPath().getPath().equals(taskName)) {
+                WorkValidationContext workValidationContext = new DefaultWorkValidationContext(new DocumentationRegistry(), type -> Optional.empty());
+                workValidationContext.forType(String.class, false).visitTypeProblem(typeProblemBuilder -> {
+                    typeProblemBuilder.forType(String.class)
+                        .documentedAt("id", "section")
+                        .reportAs(Severity.ERROR)
+                        .addPossibleSolution("Don't use strings")
+                        .withId(ValidationProblemId.ANNOTATION_INVALID_IN_CONTEXT)
+                        .withDescription("The description")
+                        ;
+                });
+                reportErrors(workValidationContext.getProblems(), workValidationContext);
                 throw new TaskSelectionException(matcher.formatErrorMessage("Task", searchContext));
             } else {
                 throw new TaskSelectionException(String.format("Cannot locate %s that match '%s' as %s", context.getType(), context.getOriginalPath(), matcher.formatErrorMessage("task", searchContext)));
             }
         }
+    }
+
+    private void reportErrors(List<TypeValidationProblem> problems, WorkValidationContext validationContext) {
+        //DefaultTypeValidationContext.throwOnProblemsOf();
+        ImmutableSet<String> uniqueErrors = getUniqueErrors(problems);
+        if (!uniqueErrors.isEmpty()) {
+            throw WorkValidationException.forProblems(uniqueErrors)
+                .withSummaryForContext("Gradle build", validationContext)
+                .get();
+        }
+        else {
+            throw new IllegalStateException("Should not happen");
+        }
+    }
+
+    private static ImmutableSet<String> getUniqueErrors(List<TypeValidationProblem> problems) {
+        return problems.stream()
+            .filter(problem -> !problem.getSeverity().isWarning())
+            .map(TypeValidationProblemRenderer::renderMinimalInformationAbout)
+            .collect(ImmutableSet.toImmutableSet());
     }
 
     private static class TaskPathSpec implements Spec<Task> {
