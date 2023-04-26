@@ -151,6 +151,7 @@ class LoadBuildStructureBuildOperationIntegrationTest extends AbstractIntegratio
         assert project.projectDir == projectDir.absolutePath
         assert project.buildFile == new File(projectDir, buildFileName).absolutePath
         assert project.children*.path == children
+        assert project.buildTreePath == identityPath ?: project.path
     }
 
     Map project(String path, Map rootProject, Map parent = null) {
