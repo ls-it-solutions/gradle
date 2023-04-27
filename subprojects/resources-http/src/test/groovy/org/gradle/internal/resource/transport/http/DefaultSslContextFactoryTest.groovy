@@ -22,6 +22,8 @@ import spock.lang.Specification
 import spock.lang.TempDir
 
 import java.security.KeyStore
+import java.security.Provider
+import java.security.Security
 
 /**
  * Tests loading of keystores and truststores corresponding to system
@@ -168,10 +170,35 @@ class DefaultSslContextFactoryTest extends Specification {
         notThrown(SSLInitializationException)
     }
 
-    File createTrustStore(String password) {
+    void 'valid keystore file with non standard type'() {
+        given:
+        Security.addProvider(new FakeProvider());
+
+        props['javax.net.ssl.keyStore'] = createTrustStore('changeit', "FAKEKS").absolutePath
+        props['javax.net.ssl.keyStoreType'] = "FAKEKS"
+        props['javax.net.ssl.keyStorePassword'] = 'changeit'
+
+        when:
+        loader.load(props)
+
+        then:
+        notThrown(SSLInitializationException)
+
+        cleanup:
+        Security.removeProvider("FakeProvider")
+    }
+
+    class FakeProvider extends Provider {
+        public FakeProvider() {
+            super("FakeProvider", 1.0, "FakeProvider");
+            putService(new Service(this, "KeyStore", "FAKEKS", "org.gradle.internal.resource.transport.http.FakeKeyStore", null, null));
+        }
+    }
+
+    File createTrustStore(String password, String type = KeyStore.defaultType) {
         File trustStore = new File(temporaryDir, "truststore")
         // initialize an empty keystore
-        KeyStore keyStore = KeyStore.getInstance(KeyStore.defaultType)
+        KeyStore keyStore = KeyStore.getInstance(type)
         keyStore.load(null, null)
 
         ByteArrayOutputStream out = new ByteArrayOutputStream()

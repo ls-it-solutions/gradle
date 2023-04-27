@@ -19,6 +19,7 @@ package org.gradle.integtests
 import org.gradle.integtests.fixtures.TestResources
 import org.gradle.integtests.fixtures.executer.ExecutionResult
 import org.gradle.integtests.fixtures.executer.GradleContextualExecuter
+import org.gradle.integtests.fixtures.executer.InProcessGradleExecuter
 import org.gradle.test.fixtures.Flaky
 import org.gradle.test.fixtures.keystore.TestKeyStore
 import org.gradle.test.fixtures.server.http.BlockingHttpsServer
@@ -48,7 +49,7 @@ class WrapperHttpsIntegrationTest extends AbstractWrapperIntegrationSpec {
     TestKeyStore keyStore
 
     def setup() {
-        keyStore = TestKeyStore.init(resources.dir)
+        keyStore = TestKeyStore.init(resources.dir, "jks")
         // We need to set the SSL properties as arguments here even for non-embedded test mode
         // because we want them to be set on the wrapper client JVM, not the daemon one
         wrapperExecuter.withArguments("-Djavax.net.ssl.trustStore=$keyStore.keyStore.path",
@@ -77,9 +78,14 @@ class WrapperHttpsIntegrationTest extends AbstractWrapperIntegrationSpec {
     }
 
     def "does not warn about using basic authentication over secure connection"() {
+
         given:
         server.expect(server.head("/$TEST_DISTRIBUTION_URL"))
-        prepareWrapper(getAuthenticatedBaseUrl())
+
+        def executer = new InProcessGradleExecuter(distribution, temporaryFolder)
+        executer.withArguments("wrapper", "--gradle-distribution-url", getAuthenticatedBaseUrl())
+            .run()
+
         server.expect(server.get("/$TEST_DISTRIBUTION_URL")
             .expectUserAgent(matchesNameAndVersion("gradlew", Download.UNKNOWN_VERSION))
             .sendFile(distribution.binDistribution))

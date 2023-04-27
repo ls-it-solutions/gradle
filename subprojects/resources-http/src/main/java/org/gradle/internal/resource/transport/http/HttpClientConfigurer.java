@@ -153,7 +153,13 @@ public class HttpClientConfigurer {
     }
 
     private void configureSslSocketConnectionFactory(HttpClientBuilder builder, SslContextFactory sslContextFactory, HostnameVerifier hostnameVerifier) {
-        builder.setSSLSocketFactory(new SSLConnectionSocketFactory(sslContextFactory.createSslContext(), sslProtocols, null, hostnameVerifier));
+        builder.setSSLSocketFactory(
+            new SSLConnectionSocketFactory(
+                sslContextFactory.createSslContext(),
+                sslProtocols,
+                null,
+                hostnameVerifier)
+        );
     }
 
     private void configureAuthSchemeRegistry(HttpClientBuilder builder) {

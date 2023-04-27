@@ -100,12 +100,7 @@ public class DefaultSslContextFactory implements SslContextFactory {
              * https://github.com/gradle/gradle/issues/7842
              * https://github.com/gradle/gradle/issues/2588
              */
-            return SystemProperties.getInstance().withSystemProperties(props, new Factory<SSLContext>() {
-                @Override
-                public SSLContext create() {
-                    return delegate.load(props);
-                }
-            });
+            return SystemProperties.getInstance().withSystemProperties(props, () -> delegate.load(props));
         }
     }
 

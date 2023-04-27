@@ -17,7 +17,6 @@
 package org.gradle.test.fixtures.keystore
 
 import groovy.transform.CompileStatic
-import org.apache.commons.io.FileUtils
 import org.eclipse.jetty.util.ssl.SslContextFactory
 import org.gradle.api.Action
 import org.gradle.integtests.fixtures.executer.GradleContextualExecuter
@@ -31,7 +30,9 @@ import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
+import java.security.Key
 import java.security.KeyStore
+import java.security.cert.Certificate
 
 @CompileStatic
 class TestKeyStore {
@@ -39,9 +40,10 @@ class TestKeyStore {
     String trustStorePassword = "asdfgh"
     TestFile keyStore
     String keyStorePassword = "asdfgh"
+    String type
 
-    static TestKeyStore init(TestFile rootDir) {
-        new TestKeyStore(rootDir)
+    static TestKeyStore init(TestFile rootDir, String type = "PKCS12") {
+        new TestKeyStore(rootDir, type)
     }
 
     /*
@@ -58,7 +60,8 @@ class TestKeyStore {
      The current trustStore-adoptopenjdk-8 is created from AdoptOpenJDK8 cacerts.
      */
 
-    private TestKeyStore(TestFile rootDir) {
+    private TestKeyStore(TestFile rootDir, String type = "PKCS12") {
+        this.type = type
         keyStore = rootDir.file("clientStore")
         trustStore = rootDir.file("serverStore")
 
@@ -66,9 +69,25 @@ class TestKeyStore {
         copyCertFile("test-key-store/trustStore-adoptopenjdk-8.bin", trustStore)
     }
 
-    private static void copyCertFile(String s, TestFile clientStore) {
+    private void copyCertFile(String s, TestFile clientStore) {
         URL fileUrl = ClassLoader.getSystemResource(s);
-        FileUtils.copyURLToFile(fileUrl, clientStore);
+        KeyStore original = KeyStore.getInstance("PKCS12");
+        original.load(fileUrl.openStream(), keyStorePassword.toCharArray());
+
+        KeyStore target = KeyStore.getInstance(type);
+        target.load(null, null);
+        for (alias in original.aliases()) {
+            if (original.isKeyEntry(alias)) {
+                Key key = original.getKey(alias, keyStorePassword.toCharArray())
+                target.setKeyEntry(alias, key, keyStorePassword.toCharArray(), original.getCertificateChain(alias));
+            } else {
+                Certificate cert = original.getCertificate(alias);
+                target.setCertificateEntry(alias, cert);
+            }
+        }
+        OutputStream os = clientStore.newOutputStream();
+        target.store(os, keyStorePassword.toCharArray());
+        os.close()
     }
 
     void enableSslWithServerCert(
@@ -145,10 +164,10 @@ class TestKeyStore {
      */
     private static SSLContext createSSLContext(TestKeyStore testKeyStore) {
         try {
-            KeyStore keyStore = KeyStore.getInstance("JKS");
+            KeyStore keyStore = KeyStore.getInstance(testKeyStore.type);
             char[] keyStorePassword = testKeyStore.getKeyStorePassword().toCharArray();
 
-            testKeyStore.getKeyStore().withInputStream {keyStoreIn ->
+            testKeyStore.getKeyStore().withInputStream { keyStoreIn ->
                 keyStore.load(keyStoreIn, keyStorePassword)
             }
 
