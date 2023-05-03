@@ -141,8 +141,6 @@ Required by:
             classes.doLast {
                 def rootComponent = rootProvider.get()
                 assert rootComponent.id.build.buildPath == ':'
-                assert rootComponent.id.build.name == ':'
-                assert rootComponent.id.build.currentBuild
                 assert rootComponent.id.projectPath == ':'
                 assert rootComponent.id.projectName == 'buildA'
 
@@ -151,8 +149,6 @@ Required by:
                 def buildRootProject = components[0]
                 def componentId = components[0].id
                 assert componentId.build.buildPath == ':${buildName}'
-                assert componentId.build.name == '${buildName}'
-                assert !componentId.build.currentBuild
                 assert componentId.projectPath == ':'
                 assert componentId.projectName == '${buildName}'
 
@@ -160,8 +156,6 @@ Required by:
                 assert components.size() == 1
                 componentId = components[0].id
                 assert componentId.build.buildPath == ':${buildName}'
-                assert componentId.build.name == '${buildName}'
-                assert !componentId.build.currentBuild
                 assert componentId.projectPath == ':b1'
                 assert componentId.projectName == 'b1'
 
@@ -173,16 +167,9 @@ Required by:
                 assert selectors.size() == 1
                 assert selectors[0].displayName == 'project :${buildName}:b1'
                 assert selectors[0].buildPath == ':${buildName}'
-                assert selectors[0].buildName == '${buildName}'
                 assert selectors[0].projectPath == ':b1'
             }
         """
-
-        3.times {
-            executer.expectDocumentedDeprecationWarning("The BuildIdentifier.getName() method has been deprecated. This is scheduled to be removed in Gradle 9.0. Use getBuildPath() to get a unique identifier for the build. Consult the upgrading guide for further information: https://docs.gradle.org/current/userguide/upgrading_version_8.html#build_identifier_name_and_current_deprecation")
-            executer.expectDocumentedDeprecationWarning("The BuildIdentifier.isCurrentBuild() method has been deprecated. This is scheduled to be removed in Gradle 9.0. Use getBuildPath() to get a unique identifier for the build. Consult the upgrading guide for further information: https://docs.gradle.org/current/userguide/upgrading_version_8.html#build_identifier_name_and_current_deprecation")
-        }
-        executer.expectDocumentedDeprecationWarning("The ProjectComponentSelector.getBuildName() method has been deprecated. This is scheduled to be removed in Gradle 9.0. Use getBuildPath() to get a unique identifier for the build. Consult the upgrading guide for further information: https://docs.gradle.org/current/userguide/upgrading_version_8.html#build_identifier_name_and_current_deprecation")
 
         expect:
         execute(buildA, ":assemble")
@@ -223,10 +210,7 @@ Required by:
                 def rootComponent = rootProvider.get()
                 def projectInOtherBuild = rootComponent.dependencies[0].selected
                 def self = rootComponent.dependencies[1].selected
-                assert rootComponent.id.build.currentBuild
-                assert self.id.build.currentBuild
                 assert self == rootComponent
-                assert !projectInOtherBuild.id.build.currentBuild
             }
         """
         buildB.buildFile << """
@@ -235,10 +219,7 @@ Required by:
                 def rootComponent = rootProvider.get()
                 def projectInOtherBuild = rootComponent.dependencies[0].selected
                 def self = rootComponent.dependencies[1].selected
-                assert rootComponent.id.build.currentBuild
-                assert self.id.build.currentBuild
                 assert self == rootComponent
-                assert !projectInOtherBuild.id.build.currentBuild
             }
         """
         buildC.buildFile << """
@@ -246,13 +227,9 @@ Required by:
             classes.doLast {
                 def rootComponent = rootProvider.get()
                 def self = rootComponent.dependencies[0].selected
-                assert rootComponent.id.build.currentBuild
-                assert self.id.build.currentBuild
                 assert self == rootComponent
             }
         """
-
-        8.times { executer.expectDocumentedDeprecationWarning("The BuildIdentifier.isCurrentBuild() method has been deprecated. This is scheduled to be removed in Gradle 9.0. Use getBuildPath() to get a unique identifier for the build. Consult the upgrading guide for further information: https://docs.gradle.org/current/userguide/upgrading_version_8.html#build_identifier_name_and_current_deprecation") }
 
         expect:
         execute(buildA, ":buildC:assemble", ":buildB:assemble", ":assemble")
