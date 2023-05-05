@@ -32,7 +32,7 @@ abstract class EnvVariableInjection extends BuildInputInjection {
 
             @Override
             void setup(AbstractConfigurationCacheIntegrationTest test) {
-                HashMap<String, String> environment = new HashMap<>(System.getenv())
+                HashMap<String, String> environment = new HashMap<>(test.executer.environmentVars)
                 variables.forEach((k, v) -> {
                     if (v != null) {
                         environment.put(k, v)

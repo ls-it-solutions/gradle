@@ -731,7 +731,7 @@ public abstract class AbstractGradleExecuter implements GradleExecuter, Resettab
         return this;
     }
 
-    protected Map<String, String> getEnvironmentVars() {
+    public Map<String, String> getEnvironmentVars() {
         return new HashMap<>(environmentVars);
     }
 

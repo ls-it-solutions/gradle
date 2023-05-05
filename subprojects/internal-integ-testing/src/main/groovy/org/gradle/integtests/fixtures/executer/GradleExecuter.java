@@ -77,6 +77,13 @@ public interface GradleExecuter extends Stoppable {
      */
     GradleExecuter withEnvironmentVars(Map<String, ?> environment);
 
+    /**
+     * The environment variables to use when executing the build.
+     *
+     * Changes to the returned map will not be reflected in the executer.
+     */
+    Map<String, String> getEnvironmentVars();
+
     @Deprecated
     GradleExecuter usingSettingsFile(File settingsFile);
 
