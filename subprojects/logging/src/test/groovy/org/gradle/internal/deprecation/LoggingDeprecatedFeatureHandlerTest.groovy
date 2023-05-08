@@ -32,6 +32,7 @@ import org.gradle.internal.operations.DefaultBuildOperationRef
 import org.gradle.internal.operations.OperationIdentifier
 import org.gradle.internal.operations.OperationProgressEvent
 import org.gradle.internal.time.Clock
+import org.gradle.problems.ProblemDiagnostics
 import org.gradle.problems.buildtree.ProblemDiagnosticsFactory
 import org.gradle.util.SetSystemProperties
 import org.gradle.util.internal.TextUtil
@@ -46,7 +47,7 @@ class LoggingDeprecatedFeatureHandlerTest extends Specification {
     final ConfigureLogging logging = new ConfigureLogging(outputEventListener)
     @Rule
     SetSystemProperties systemProperties = new SetSystemProperties()
-    final locationReporter = Mock(ProblemDiagnosticsFactory)
+    final diagnosticsFactory = Mock(ProblemDiagnosticsFactory)
     final handler = new LoggingDeprecatedFeatureHandler()
     final Clock clock = Mock(Clock)
     final BuildOperationListener buildOperationListener = Mock()
@@ -56,7 +57,10 @@ class LoggingDeprecatedFeatureHandlerTest extends Specification {
     )
 
     def setup() {
-        handler.init(locationReporter, WarningMode.All, progressBroadcaster)
+        _ * diagnosticsFactory.forCurrentCaller(_) >> Stub(ProblemDiagnostics) {
+            location >> null
+        }
+        handler.init(diagnosticsFactory, WarningMode.All, progressBroadcaster)
     }
 
     def 'logs each deprecation warning only once'() {
@@ -89,7 +93,7 @@ class LoggingDeprecatedFeatureHandlerTest extends Specification {
 
     def "no warnings should be displayed in #type"() {
         when:
-        handler.init(locationReporter, type, progressBroadcaster)
+        handler.init(diagnosticsFactory, type, progressBroadcaster)
         handler.featureUsed(deprecatedFeatureUsage('feature1'))
 
         then:
