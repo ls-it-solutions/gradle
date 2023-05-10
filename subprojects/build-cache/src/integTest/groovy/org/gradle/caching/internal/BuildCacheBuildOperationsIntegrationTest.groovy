@@ -48,7 +48,7 @@ class BuildCacheBuildOperationsIntegrationTest extends AbstractIntegrationSpec {
     }
 
     def setup() {
-        executer.beforeExecute { it.withBuildCacheEnabled() }
+        executer.beforeExecute { withBuildCacheNgEnabled() }
     }
 
     void register(String className, String loadBody, String storeBody, boolean isLocal = false) {
