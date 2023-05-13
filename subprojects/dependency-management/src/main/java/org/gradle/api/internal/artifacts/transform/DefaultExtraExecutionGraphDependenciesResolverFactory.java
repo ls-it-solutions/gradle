@@ -33,7 +33,8 @@ public class DefaultExtraExecutionGraphDependenciesResolverFactory implements Ex
     private final ResolutionResultProvider<ResolutionResult> resolutionResultProvider;
 
     public DefaultExtraExecutionGraphDependenciesResolverFactory(
-        ConfigurationIdentity configurationIdentity, ResolutionResultProvider<ResolutionResult> resolutionResultProvider,
+        ConfigurationIdentity configurationIdentity,
+        ResolutionResultProvider<ResolutionResult> resolutionResultProvider,
         DomainObjectContext owner,
         CalculatedValueContainerFactory calculatedValueContainerFactory,
         FilteredResultFactory filteredResultFactory
