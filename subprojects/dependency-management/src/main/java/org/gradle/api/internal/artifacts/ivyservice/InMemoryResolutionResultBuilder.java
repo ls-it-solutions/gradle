@@ -51,6 +51,7 @@ public class InMemoryResolutionResultBuilder implements DependencyGraphVisitor {
             resolutionResultBuilder.visitSelectedVariant(variant.getNodeId(), variant.getResolveState().getVariantResult(null));
         }
         resolutionResultBuilder.visitComponentVariants(component.getAvailableVariants());
+        resolutionResultBuilder.endVisitComponent();
     }
 
     @Override
