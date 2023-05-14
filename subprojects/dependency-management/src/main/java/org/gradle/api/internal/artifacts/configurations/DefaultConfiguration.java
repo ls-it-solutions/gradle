@@ -732,12 +732,15 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
                 if (!newState.hasError()) {
                     dependencyResolutionListeners.getSource().afterResolve(incoming);
-                    // Discard listeners
-                    dependencyResolutionListeners.removeAll();
 
                     // Use the current state, which may have changed if the listener queried the result
                     newState = currentResolveState.get();
                 }
+
+                // Discard State
+                dependencyResolutionListeners.removeAll();
+                resolutionStrategy.discardStateRequiredForGraphResolution();
+
                 captureBuildOperationResult(context, results);
                 return newState;
             }
