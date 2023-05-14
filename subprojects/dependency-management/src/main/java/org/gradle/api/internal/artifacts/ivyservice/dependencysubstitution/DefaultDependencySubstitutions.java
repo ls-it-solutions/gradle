@@ -235,11 +235,8 @@ public class DefaultDependencySubstitutions implements DependencySubstitutionsIn
             public Substitution using(ComponentSelector notation) {
                 DefaultDependencySubstitution.validateTarget(notation);
 
-                boolean projectInvolved = false;
-                if (substituted instanceof ProjectComponentSelector || notation instanceof ProjectComponentSelector) {
-                    // A project is involved, need to be aware of it
-                    projectInvolved = true;
-                }
+                // A project is involved, need to be aware of it
+                boolean projectInvolved = substituted instanceof ProjectComponentSelector || notation instanceof ProjectComponentSelector;
 
                 if (substituted instanceof UnversionedModuleComponentSelector) {
                     final ModuleIdentifier moduleId = ((UnversionedModuleComponentSelector) substituted).getModuleIdentifier();
