@@ -739,7 +739,9 @@ public class DefaultConfiguration extends AbstractFileCollection implements Conf
 
                 // Discard State
                 dependencyResolutionListeners.removeAll();
-                resolutionStrategy.discardStateRequiredForGraphResolution();
+                if (resolutionStrategy != null) {
+                    resolutionStrategy.discardStateRequiredForGraphResolution();
+                }
 
                 captureBuildOperationResult(context, results);
                 return newState;
