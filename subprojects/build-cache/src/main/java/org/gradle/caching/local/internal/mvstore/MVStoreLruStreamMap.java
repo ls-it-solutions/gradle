@@ -103,6 +103,7 @@ public class MVStoreLruStreamMap {
         if (inputStream == null) {
             return null;
         }
+        // TODO update timestamp only if some time has passed, e.g. 1 day?
         tryUpdateTimestamp(key, keyAsBytes);
         return inputStream;
     }
@@ -115,12 +116,18 @@ public class MVStoreLruStreamMap {
      * And if another get is in progress, timestamp will be updated anyway.
      */
     private void tryUpdateTimestamp(BuildCacheKey key, byte[] keyAsBytes) {
-        tryLockAndRun(key, () -> keyToDataIndex.computeIfPresent(keyAsBytes, (newKey, index) -> {
+        tryLockAndRun(key, () -> {
+            ValueWithTimestamp previousEntry = keyToDataIndex.get(keyAsBytes);
+            if (previousEntry == null) {
+                // If deletion happened just before lock was acquired
+                return;
+            }
             long currentTimestamp = System.currentTimeMillis();
-            lruKeyToDataIndex.put(new ValueWithTimestamp(currentTimestamp, newKey), index.getValue());
-            lruKeyToDataIndex.remove(new ValueWithTimestamp(index.getTimestamp(), newKey));
-            return new ValueWithTimestamp(currentTimestamp, index.getValue());
-        }));
+            lruKeyToDataIndex.put(new ValueWithTimestamp(currentTimestamp, keyAsBytes), previousEntry.getValue());
+            keyToDataIndex.put(keyAsBytes, new ValueWithTimestamp(currentTimestamp, previousEntry.getValue()));
+            // Since we do a cleanup by LRU order, delete previous LRU map entry last
+            lruKeyToDataIndex.remove(new ValueWithTimestamp(previousEntry.getTimestamp(), keyAsBytes));
+        });
     }
 
     public void delete(BuildCacheKey key) {
