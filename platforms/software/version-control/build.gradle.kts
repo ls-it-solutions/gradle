@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.guava)
     implementation(libs.inject)
     implementation(libs.jgit)
+    implementation(libs.jgitSsh)
     implementation(libs.jsch)
 
     testImplementation(project(":native"))
