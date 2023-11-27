@@ -1108,6 +1108,29 @@ If you store secrets in that file, care must be taken to protect access to the f
 
 See link:{gradle-issues}22618[gradle/gradle#22618].
 
+==== Providing an encryption key via `GRADLE_ENCRYPTION_KEY` environment variable
+
+By default, Gradle automatically generates and manages the encryption key as a Java keystore stored under the Gradle User Home.
+
+For environments where this is undesirable (for instance, because the `<<directory_layout.adoc#dir:gradle_user_home,GRADLE_USER_HOME>>` directory is shared across machines),
+you may provide Gradle with the exact encryption key to use when
+reading or writing the cached configuration data, via the `GRADLE_ENCRYPTION_KEY` environment variable.
+
+===== Generating an encryption key that is compatible with GRADLE_ENCRYPTION_KEY
+
+For Gradle to encrypt the configuration cache using a user-specified encryption key,
+you must run Gradle while having the GRADLE_ENCRYPTION_KEY environment variable set with a valid AES 128-bit key.
+
+There are many different ways of producing an encryption key that is compatible with Gradle.
+One way is by using a command like this, which should work on Linux and Mac OS, or even on Windows, if using a tool like Cygwin:
+
+```
+❯ echo $(openssl enc -aes-128-cbc -k secret -P | grep key= | sed s/key=// | base64)
+```
+
+You can then use the key produced by that command (which is encoded as a Base64 string) and set it as the value of the
+`GRADLE_ENCRYPTION_KEY` environment variable however you prefer configuring environment variables in your OS.
+
 [[config_cache:not_yet_implemented:sharing]]
 === Sharing the configuration cache
 
