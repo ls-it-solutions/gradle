@@ -28,6 +28,7 @@ import org.gradle.internal.service.scopes.ServiceScope
 import org.gradle.util.internal.EncryptionAlgorithm
 import org.gradle.util.internal.EncryptionAlgorithm.EncryptionException
 import org.gradle.util.internal.SupportedEncryptionAlgorithm
+import java.io.Closeable
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -126,15 +127,39 @@ class DefaultEncryptionService(
 
     override fun outputStream(stateType: StateType, output: () -> OutputStream): OutputStream =
         if (shouldEncryptStreams(stateType))
-            encryptingOutputStream(output.invoke())
+            safeWrap(output, this::encryptingOutputStream)
         else
             output.invoke()
 
     override fun inputStream(stateType: StateType, input: () -> InputStream): InputStream =
         if (shouldEncryptStreams(stateType))
-            decryptingInputStream(input.invoke())
+            safeWrap(input, this::decryptingInputStream)
         else
             input.invoke()
+
+    /**
+     * Wraps an inner closeable into an outer closeable, while ensuring that
+     * if the wrapper function fails, the inner closeable is closed before
+     * the exception is thrown.
+     *
+     * @param innerSupplier the supplier that produces the inner closeable that is to be safely wrapped
+     * @param unsafeWrapper a wrapping function that is potentially unsafe
+     * @return the result of the wrapper function
+     */
+    private
+    fun <C : Closeable, T : Closeable> safeWrap(innerSupplier: () -> C, unsafeWrapper: (C) -> T): T {
+        // fine if we fail here
+        val innerCloseable = innerSupplier()
+        val outerCloseable = try {
+            // but if we fail here, we need to ensure we close
+            // the inner closeable, or else it will leak
+            unsafeWrapper(innerCloseable)
+        } catch (e: Exception) {
+            innerCloseable.close()
+            throw e
+        }
+        return outerCloseable
+    }
 
     private
     fun decryptingInputStream(inputStream: InputStream): InputStream {
