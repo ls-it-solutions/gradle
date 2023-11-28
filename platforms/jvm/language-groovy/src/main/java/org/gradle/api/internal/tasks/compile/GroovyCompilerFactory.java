@@ -18,12 +18,12 @@ package org.gradle.api.internal.tasks.compile;
 
 import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.internal.ClassPathRegistry;
+import org.gradle.api.internal.tasks.compile.daemon.ClassloaderIsolatedCompilerWorkerExecutor;
 import org.gradle.api.internal.tasks.compile.daemon.CompilerWorkerExecutor;
 import org.gradle.api.internal.tasks.compile.daemon.DaemonGroovyCompiler;
-import org.gradle.api.internal.tasks.compile.daemon.ClassloaderIsolatedCompilerWorkerExecutor;
 import org.gradle.api.internal.tasks.compile.daemon.ProcessIsolatedCompilerWorkerExecutor;
 import org.gradle.api.internal.tasks.compile.processing.AnnotationProcessorDetector;
-import org.gradle.api.problems.Problems;
+import org.gradle.api.problems.internal.InternalProblems;
 import org.gradle.api.tasks.WorkResult;
 import org.gradle.initialization.ClassLoaderRegistry;
 import org.gradle.internal.jvm.inspection.JvmVersionDetector;
@@ -77,10 +77,10 @@ public class GroovyCompilerFactory implements CompilerFactory<GroovyJavaJointCom
     public static class DaemonSideCompiler implements Compiler<GroovyJavaJointCompileSpec> {
         private final ProjectLayout projectLayout;
         private final List<File> javaCompilerPlugins;
-        private final Problems problems;
+        private final InternalProblems problems;
 
         @Inject
-        public DaemonSideCompiler(ProjectLayout projectLayout, List<File> javaCompilerPlugins, Problems problems) {
+        public DaemonSideCompiler(ProjectLayout projectLayout, List<File> javaCompilerPlugins, InternalProblems problems) {
             this.projectLayout = projectLayout;
             this.javaCompilerPlugins = javaCompilerPlugins;
             this.problems = problems;
