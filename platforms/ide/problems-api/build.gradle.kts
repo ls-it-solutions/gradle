@@ -43,4 +43,5 @@ dependencies {
     integTestDistributionRuntimeOnly(project(":distributions-core"))
 
     testFixturesImplementation(project(":enterprise-operations"))
+    testFixturesImplementation(project(":base-services"))
 }

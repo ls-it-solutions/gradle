@@ -22,15 +22,20 @@ import org.gradle.api.problems.ProblemBuilderSpec;
 import org.gradle.api.problems.ProblemEmitter;
 import org.gradle.api.problems.ProblemTransformer;
 import org.gradle.api.problems.ReportableProblem;
+import org.gradle.internal.concurrent.Stoppable;
 import org.gradle.internal.service.scopes.Scopes;
 import org.gradle.internal.service.scopes.ServiceScope;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static com.google.common.collect.Lists.newArrayList;
 
 @ServiceScope(Scopes.BuildTree.class)
-public class DefaultProblems implements InternalProblems {
-
+public class DefaultProblems implements InternalProblems, Stoppable {
     private ProblemEmitter emitter;
     private final List<ProblemTransformer> transformers;
 
@@ -38,8 +43,7 @@ public class DefaultProblems implements InternalProblems {
         this(emitter, Collections.<ProblemTransformer>emptyList());
     }
 
-    public DefaultProblems(ProblemEmitter emitter, List<ProblemTransformer> transformers
-    ) {
+    public DefaultProblems(ProblemEmitter emitter, List<ProblemTransformer> transformers) {
         this.emitter = emitter;
         this.transformers = transformers;
     }
@@ -58,7 +62,11 @@ public class DefaultProblems implements InternalProblems {
         DefaultReportableProblemBuilder defaultProblemBuilder = createProblemBuilder();
         action.apply(defaultProblemBuilder);
         ReportableProblem problem = defaultProblemBuilder.build();
-        throw throwError(problem.getException(), problem);
+        RuntimeException exception = problem.getException();
+        if(exception == null) {
+            throw new IllegalArgumentException("Exception must be set when throwing a problem");
+        }
+        throw throwError(exception, problem);
     }
 
     @Override
@@ -81,6 +89,7 @@ public class DefaultProblems implements InternalProblems {
         throw exception;
     }
 
+    private final Map<String, List<Problem>> seenProblems = new HashMap<String, List<Problem>>();
     @Override
     public void report(Problem problem) {
         // Transform the problem with all registered transformers
@@ -88,6 +97,28 @@ public class DefaultProblems implements InternalProblems {
             problem = transformer.transform(problem);
         }
 
+        String deduplicationKey = problem.getProblemCategory().getCategory() + ";" + problem.getLabel();
+        List<Problem> seenProblem = seenProblems.get(deduplicationKey);
+        if(seenProblem != null) {
+            seenProblem.add(problem);
+            return;
+        }
+
+        seenProblems.put(deduplicationKey, newArrayList(problem));
+
         emitter.emit(problem);
+    }
+
+    @Override
+    public void stop() {
+
+//        buildOperationProgressEventEmitter.emitNowIfCurrent(new DefaultProblemProgressDetails(problem));
+        Set<Map.Entry<String, List<Problem>>> entries = seenProblems.entrySet();
+//        for(Map.Entry<String, List<Problem>> seenProblem : entries){
+//            for(Problem problem : seenProblem.getValue()) {
+////                System.out.println("Problem: " + problem.getLabel());
+//            }
+//        }
+//        emitter.emit(entries.iterator().next().getValue().get(0));
     }
 }
