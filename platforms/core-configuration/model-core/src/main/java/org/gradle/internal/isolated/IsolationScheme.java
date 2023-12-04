@@ -16,8 +16,6 @@
 
 package org.gradle.internal.isolated;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.reflect.TypeToken;
 import org.gradle.api.file.ArchiveOperations;
 import org.gradle.api.file.FileSystemOperations;
@@ -40,16 +38,11 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.ExecutionException;
 
 public class IsolationScheme<IMPLEMENTATION, PARAMS> {
     private final Class<IMPLEMENTATION> interfaceType;
     private final Class<PARAMS> paramsType;
     private final Class<? extends PARAMS> noParamsType;
-    private final Cache<Object, Object> parameterTypeCache = CacheBuilder.newBuilder()
-        .weakKeys()
-        .weakValues()
-        .build();
 
     public IsolationScheme(Class<IMPLEMENTATION> interfaceType, Class<PARAMS> paramsType, Class<? extends PARAMS> noParamsType) {
         this.interfaceType = interfaceType;
@@ -96,28 +89,21 @@ public class IsolationScheme<IMPLEMENTATION, PARAMS> {
     }
 
     @Nonnull
-    @SuppressWarnings("unchecked")
     private <T extends IMPLEMENTATION, P extends PARAMS> Class<P> inferParameterType(Class<T> implementationType, int typeArgumentIndex) {
-        try {
-            return (Class<P>) parameterTypeCache.get(implementationType, () -> {
-                // Avoid using TypeToken for the common simple case, as TypeToken is quite slow
-                for (Type superType : implementationType.getGenericInterfaces()) {
-                    if (superType instanceof ParameterizedType) {
-                        ParameterizedType parameterizedSuperType = (ParameterizedType) superType;
-                        if (parameterizedSuperType.getRawType().equals(interfaceType)) {
-                            Type argument = parameterizedSuperType.getActualTypeArguments()[typeArgumentIndex];
-                            if (argument instanceof Class) {
-                                return Cast.uncheckedCast(argument);
-                            }
-                        }
+        // Avoid using TypeToken for the common simple case, as TypeToken is quite slow
+        for (Type superType : implementationType.getGenericInterfaces()) {
+            if (superType instanceof ParameterizedType) {
+                ParameterizedType parameterizedSuperType = (ParameterizedType) superType;
+                if (parameterizedSuperType.getRawType().equals(interfaceType)) {
+                    Type argument = parameterizedSuperType.getActualTypeArguments()[typeArgumentIndex];
+                    if (argument instanceof Class) {
+                        return Cast.uncheckedCast(argument);
                     }
                 }
-                ParameterizedType superType = (ParameterizedType) TypeToken.of(implementationType).getSupertype(interfaceType).getType();
-                return Cast.uncheckedNonnullCast(TypeToken.of(superType.getActualTypeArguments()[typeArgumentIndex]).getRawType());
-            });
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
+            }
         }
+        ParameterizedType superType = (ParameterizedType) TypeToken.of(implementationType).getSupertype(interfaceType).getType();
+        return Cast.uncheckedNonnullCast(TypeToken.of(superType.getActualTypeArguments()[typeArgumentIndex]).getRawType());
     }
 
     /**
