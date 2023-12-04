@@ -115,6 +115,8 @@ public class DefaultTransform implements Transform {
     private final DirectorySensitivity dependenciesDirectorySensitivity;
     private final LineEndingSensitivity artifactLineEndingSensitivity;
     private final LineEndingSensitivity dependenciesLineEndingSensitivity;
+    @SuppressWarnings("rawtypes")
+    private final IsolationScheme<TransformAction, TransformParameters> isolationScheme;
 
     public DefaultTransform(
         Class<? extends TransformAction<?>> implementationClass,
@@ -137,7 +139,8 @@ public class DefaultTransform implements Transform {
         InstantiationScheme actionInstantiationScheme,
         DomainObjectContext owner,
         CalculatedValueContainerFactory calculatedValueContainerFactory,
-        ServiceLookup internalServices
+        ServiceLookup internalServices,
+        @SuppressWarnings("rawtypes") IsolationScheme<TransformAction, TransformParameters> isolationScheme
     ) {
         this.implementationClass = implementationClass;
         this.fromAttributes = fromAttributes;
@@ -157,6 +160,7 @@ public class DefaultTransform implements Transform {
         this.isolatedParameters = calculatedValueContainerFactory.create(Describables.of("parameters of", this),
             new IsolateTransformParameters(parameterObject, implementationClass, cacheable, owner, parameterPropertyWalker, isolatableFactory, buildOperationExecutor, classLoaderHierarchyHasher,
                 fileCollectionFactory));
+        this.isolationScheme = isolationScheme;
     }
 
     /**
@@ -176,7 +180,8 @@ public class DefaultTransform implements Transform {
         DirectorySensitivity artifactDirectorySensitivity,
         DirectorySensitivity dependenciesDirectorySensitivity,
         LineEndingSensitivity artifactLineEndingSensitivity,
-        LineEndingSensitivity dependenciesLineEndingSensitivity
+        LineEndingSensitivity dependenciesLineEndingSensitivity,
+        @SuppressWarnings("rawtypes") IsolationScheme<TransformAction, TransformParameters> isolationScheme
     ) {
         this.implementationClass = implementationClass;
         this.fromAttributes = fromAttributes;
@@ -194,6 +199,7 @@ public class DefaultTransform implements Transform {
         this.dependenciesDirectorySensitivity = dependenciesDirectorySensitivity;
         this.artifactLineEndingSensitivity = artifactLineEndingSensitivity;
         this.dependenciesLineEndingSensitivity = dependenciesLineEndingSensitivity;
+        this.isolationScheme = isolationScheme;
     }
 
     private static final String CACHEABLE_TRANSFORM_CANT_USE_ABSOLUTE_SENSITIVITY = "CACHEABLE_TRANSFORM_CANT_USE_ABSOLUTE_SENSITIVITY";
@@ -407,7 +413,7 @@ public class DefaultTransform implements Transform {
 
     private TransformAction<?> newTransformAction(Provider<FileSystemLocation> inputArtifactProvider, TransformDependencies transformDependencies, @Nullable InputChanges inputChanges) {
         TransformParameters parameters = isolatedParameters.get().getIsolatedParameterObject().isolate();
-        ServiceLookup services = new IsolationScheme<>(TransformAction.class, TransformParameters.class, TransformParameters.None.class).servicesForImplementation(parameters, internalServices);
+        ServiceLookup services = isolationScheme.servicesForImplementation(parameters, internalServices);
         services = new TransformServiceLookup(inputArtifactProvider, requiresDependencies ? transformDependencies : null, inputChanges, services);
         return instanceFactory.newInstance(services);
     }

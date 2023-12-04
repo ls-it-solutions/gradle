@@ -33,6 +33,7 @@ import org.gradle.internal.fingerprint.FileNormalizer;
 import org.gradle.internal.fingerprint.LineEndingSensitivity;
 import org.gradle.internal.hash.ClassLoaderHierarchyHasher;
 import org.gradle.internal.instantiation.InstantiationScheme;
+import org.gradle.internal.isolated.IsolationScheme;
 import org.gradle.internal.isolation.IsolatableFactory;
 import org.gradle.internal.model.CalculatedValueContainerFactory;
 import org.gradle.internal.operations.BuildOperationExecutor;
@@ -65,6 +66,8 @@ public class DefaultTransformRegistrationFactory implements TransformRegistratio
     private final CalculatedValueContainerFactory calculatedValueContainerFactory;
     private final DomainObjectContext owner;
     private final InstantiationScheme actionInstantiationScheme;
+    @SuppressWarnings("rawtypes")
+    private final IsolationScheme<TransformAction, TransformParameters> isolationScheme;
 
     public DefaultTransformRegistrationFactory(
         BuildOperationExecutor buildOperationExecutor,
@@ -93,6 +96,7 @@ public class DefaultTransformRegistrationFactory implements TransformRegistratio
         this.actionMetadataStore = actionScheme.getInspectionScheme().getMetadataStore();
         this.parametersPropertyWalker = parameterScheme.getInspectionScheme().getPropertyWalker();
         this.internalServices = internalServices;
+        this.isolationScheme = new IsolationScheme<>(TransformAction.class, TransformParameters.class, TransformParameters.None.class);
     }
 
     @Override
@@ -149,7 +153,8 @@ public class DefaultTransformRegistrationFactory implements TransformRegistratio
             actionInstantiationScheme,
             owner,
             calculatedValueContainerFactory,
-            internalServices
+            internalServices,
+            isolationScheme
         );
 
         return new DefaultTransformRegistration(from, to, new TransformStep(transform, transformInvocationFactory, owner, inputFingerprinter));

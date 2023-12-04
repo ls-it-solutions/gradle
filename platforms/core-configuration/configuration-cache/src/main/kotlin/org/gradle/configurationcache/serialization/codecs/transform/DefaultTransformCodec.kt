@@ -17,6 +17,7 @@
 package org.gradle.configurationcache.serialization.codecs.transform
 
 import org.gradle.api.artifacts.transform.TransformAction
+import org.gradle.api.artifacts.transform.TransformParameters
 import org.gradle.api.internal.artifacts.transform.DefaultTransform
 import org.gradle.api.internal.artifacts.transform.TransformActionScheme
 import org.gradle.api.internal.attributes.ImmutableAttributes
@@ -33,6 +34,7 @@ import org.gradle.configurationcache.serialization.writeEnum
 import org.gradle.internal.execution.model.InputNormalizer
 import org.gradle.internal.fingerprint.DirectorySensitivity
 import org.gradle.internal.fingerprint.LineEndingSensitivity
+import org.gradle.internal.isolated.IsolationScheme
 import org.gradle.internal.model.CalculatedValueContainer
 import org.gradle.internal.service.ServiceRegistry
 
@@ -42,6 +44,13 @@ class DefaultTransformCodec(
     private val fileLookup: FileLookup,
     private val actionScheme: TransformActionScheme
 ) : Codec<DefaultTransform> {
+
+    private
+    val isolationScheme: IsolationScheme<TransformAction<*>, TransformParameters> = IsolationScheme(
+        TransformAction::class.java,
+        TransformParameters::class.java,
+        TransformParameters.None::class.java
+    )
 
     override suspend fun WriteContext.encode(value: DefaultTransform) {
         encodePreservingSharedIdentityOf(value) {
@@ -87,7 +96,8 @@ class DefaultTransformCodec(
                 inputArtifactDirectorySensitivity,
                 inputArtifactDependenciesDirectorySensitivity,
                 inputArtifactLineEndingNormalization,
-                inputArtifactDependenciesLineEndingNormalization
+                inputArtifactDependenciesLineEndingNormalization,
+                isolationScheme
             )
         }
     }
