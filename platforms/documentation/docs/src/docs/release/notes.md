@@ -89,6 +89,63 @@ Execution failed for task ':dependencies'.
 > Get more help at https://help.gradle.org.
 ```
 
+<a name="symlinks"></a>
+
+### Symlinks support in Copy tasks
+
+One of the core principles of Gradle was to treat any symbolic link as a file it points to.
+However, there are some cases when this approach is not desirable.
+One of the common use cases is packing or unpacking archives with symlinks: symlinks help reduce archive size and speed up the packing process.
+The same can be said about copying files with symlinks: it is a lot faster to copy a symlink than a file or a directory.
+
+This release presents a new property to [`CopySpec`](javadoc/org/gradle/api/file/CopySpec.html): `linksStrategy`.
+Using this property, you can control how symlinks are handled during the copy process.
+
+The default value of `linksStrategy` for a regular copy task is `LinksStrategy.FOLLOW`, which preserves the existing behavior of Gradle of following every symlink.
+If the source file is an archive ([`zipTree`](javadoc/org/gradle/api/file/ArchiveOperations.html#zipTree-java.lang.Object-)
+or [`tarTree`](javadoc/org/gradle/api/file/ArchiveOperations.html#tarTree-java.lang.Object-), to be more specific), then the default value is `LinksStrategy.PRESERVE_RELATIVE`.
+With this strategy, symlinks from the archive are preserved unless they are pointing to a location outside the archive.
+Other possible strategies are `LinksStrategy.ERROR` to fail on any symlink and `LinksStrategy.PRESERVE_ALL` which preserves all symlinks.
+
+For example, this directory structure
+
+```
+--- input
+    --- file.txt // "Some text"
+    --- symlink -> file.txt
+```
+
+would be copied to the following directory structure
+
+```
+--- output
+    --- file.txt // "Some text"
+    --- symlink // "Some text"
+```
+
+using this task:
+
+```groovy
+tasks.register('doCopy', Copy) {
+    from("input")
+    into("output")
+    linksStrategy = LinksStrategy.FOLLOW
+}
+```
+
+```kotlin
+tasks.register<Copy>("doCopy") {
+    from("input")
+    into("output")
+    linksStrategy = LinksStrategy.FOLLOW
+}
+```
+
+The same directory structure would be copied "as is" with `LinksStrategy.PRESERVE_ALL` and `LinksStrategy.PRESERVE_RELATIVE`.
+
+See more details in the [User Manual](userguide/working_with_files.html#symlinks).
+
+
 <!-- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ADD RELEASE FEATURES ABOVE
 ==========================================================
@@ -96,6 +153,7 @@ ADD RELEASE FEATURES ABOVE
 -->
 
 ## Promoted features
+
 Promoted features are features that were incubating in previous versions of Gradle but are now supported and subject to backwards compatibility.
 See the User Manual section on the “[Feature Lifecycle](userguide/feature_lifecycle.html)” for more information.
 
