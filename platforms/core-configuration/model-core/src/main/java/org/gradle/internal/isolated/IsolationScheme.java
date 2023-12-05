@@ -16,6 +16,8 @@
 
 package org.gradle.internal.isolated;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.gradle.api.file.ArchiveOperations;
 import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.model.ObjectFactory;
@@ -44,12 +46,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class IsolationScheme<IMPLEMENTATION, PARAMS> {
     private final Class<IMPLEMENTATION> interfaceType;
     private final Class<PARAMS> paramsType;
     private final Class<? extends PARAMS> noParamsType;
+    private final Cache<String, Class<?>> inferedParameterTypes = CacheBuilder.newBuilder()
+        .weakValues()
+        .build();
 
     public IsolationScheme(Class<IMPLEMENTATION> interfaceType, Class<PARAMS> paramsType, Class<? extends PARAMS> noParamsType) {
         this.interfaceType = interfaceType;
@@ -104,30 +110,37 @@ public class IsolationScheme<IMPLEMENTATION, PARAMS> {
      * When we come to `Baz<T>`, we can then query the mapping for `T` and get `String`.
      */
     @Nonnull
+    @SuppressWarnings("unchecked")
     private <T extends IMPLEMENTATION, P extends PARAMS> Class<P> inferParameterType(Class<T> implementationType, int typeArgumentIndex) {
-        AtomicReference<Type> foundType = new AtomicReference<>();
-        Map<Type, Type> collectedTypes = new HashMap<>();
-        Types.walkTypeHierarchy(implementationType, type -> {
-            for (Type genericInterface : type.getGenericInterfaces()) {
-                if (collectTypeParameters(genericInterface, foundType, collectedTypes, typeArgumentIndex)) {
-                    return TypeVisitResult.TERMINATE;
-                }
-            }
-            Type genericSuperclass = type.getGenericSuperclass();
-            if (collectTypeParameters(genericSuperclass, foundType, collectedTypes, typeArgumentIndex)) {
-                return TypeVisitResult.TERMINATE;
-            }
-            return TypeVisitResult.CONTINUE;
-        });
+        try {
+            return (Class<P>) inferedParameterTypes.get(implementationType.getName() + "@" + typeArgumentIndex, () -> {
+                AtomicReference<Type> foundType = new AtomicReference<>();
+                Map<Type, Type> collectedTypes = new HashMap<>();
+                Types.walkTypeHierarchy(implementationType, type -> {
+                    for (Type genericInterface : type.getGenericInterfaces()) {
+                        if (collectTypeParameters(genericInterface, foundType, collectedTypes, typeArgumentIndex)) {
+                            return TypeVisitResult.TERMINATE;
+                        }
+                    }
+                    Type genericSuperclass = type.getGenericSuperclass();
+                    if (collectTypeParameters(genericSuperclass, foundType, collectedTypes, typeArgumentIndex)) {
+                        return TypeVisitResult.TERMINATE;
+                    }
+                    return TypeVisitResult.CONTINUE;
+                });
 
-        // Note: we don't handle GenericArrayType here, since
-        // we don't support arrays as a type of a Parameter anywhere
-        Type type = unwrapTypeVariable(foundType.get());
-        return type instanceof Class
-            ? Cast.uncheckedNonnullCast(type)
-            : type instanceof ParameterizedType
-            ? Cast.uncheckedNonnullCast(((ParameterizedType) type).getRawType())
-            : Cast.uncheckedNonnullCast(paramsType);
+                // Note: we don't handle GenericArrayType here, since
+                // we don't support arrays as a type of a Parameter anywhere
+                Type type = unwrapTypeVariable(foundType.get());
+                return type instanceof Class
+                    ? Cast.uncheckedNonnullCast(type)
+                    : type instanceof ParameterizedType
+                    ? Cast.uncheckedNonnullCast(((ParameterizedType) type).getRawType())
+                    : Cast.uncheckedNonnullCast(paramsType);
+            });
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private boolean collectTypeParameters(Type type, AtomicReference<Type> foundType, Map<Type, Type> collectedTypeParameters, int typeArgumentIndex) {
