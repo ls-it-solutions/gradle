@@ -155,7 +155,11 @@ class DefaultEncryptionService(
             // the inner closeable, or else it will leak
             unsafeWrapper(innerCloseable)
         } catch (e: Exception) {
-            innerCloseable.close()
+            try {
+                innerCloseable.close()
+            } catch (closingException: Exception) {
+                e.addSuppressed(closingException)
+            }
             throw e
         }
         return outerCloseable
@@ -187,10 +191,12 @@ class DefaultEncryptionService(
                     keyAlias = "gradle-secret",
                     cacheBuilderFactory = cacheBuilderFactory
                 )
+
             EncryptionKind.ENV_VAR ->
                 EnvironmentVarKeySource(
                     encryptionAlgorithm = encryptionAlgorithm.algorithm
                 )
+
             EncryptionKind.NONE ->
                 NoEncryptionKeySource()
         }
