@@ -255,6 +255,20 @@ class ConfigurationCacheEncryptionIntegrationTest extends AbstractConfigurationC
         containsLine(result.error, matchesRegexp(".*java.security.InvalidKeyException.*"))
     }
 
+    def "build fails if key is provided via env var but not Base64-encoded"() {
+        given:
+        char invalidBase64Char = "!"
+        def invalidEncryptionKey = "${invalidBase64Char}${encryptionKeyAsBase64}"
+
+        when:
+        runWithEncryption(EncryptionKind.ENV_VAR, ["help"], [], [(GRADLE_ENCRYPTION_KEY_ENV_KEY): invalidEncryptionKey], this::configurationCacheFails)
+
+        then:
+        // since the key is not fully validated until needed, we only get an error when encrypting
+        failure.assertHasDescription("Error loading encryption key from GRADLE_ENCRYPTION_KEY environment variable")
+        failure.assertHasCause("Illegal base64 character ${Integer.toHexString((int) invalidBase64Char)}")
+    }
+
     def "build fails if key is provided via env var but not long enough"() {
         given:
         def insufficientlyLongEncryptionKey = Base64.encoder.encodeToString("01234567".getBytes(StandardCharsets.UTF_8))
