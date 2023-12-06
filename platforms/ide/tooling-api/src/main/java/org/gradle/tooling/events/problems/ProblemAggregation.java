@@ -28,22 +28,77 @@ import java.util.List;
  */
 @Incubating
 public interface ProblemAggregation {
+
+    /**
+     * Returns the problem category.
+     *
+     * @return the problem category
+     * @since 8.6
+     */
     ProblemCategory getCategory();
 
+    /**
+     * Returns the problem label.
+     *
+     * @return the problem label
+     * @since 8.6
+     */
     Label getLabel();
 
+    /**
+     * Returns the details string.
+     *
+     * @return the problem details
+     * @since 8.6
+     */
     Details getDetails();
 
+    /**
+     * Returns the problem severity.
+     *
+     * @return the problem severity
+     * @since 8.6
+     */
     Severity getSeverity();
 
+    /**
+     * Returns the locations associated with this problem.
+     *
+     * @return the locations
+     * @since 8.6
+     */
     List<Location> getLocations();
 
+    /**
+     * Returns the link to the documentation
+     *
+     * @return the locations
+     * @since 8.6
+     */
     DocumentationLink getDocumentationLink();
 
+    /**
+     * Returns the list of solutions.
+     *
+     * @return the solutions
+     * @since 8.6
+     */
     List<Solution> getSolutions();
 
+    /**
+     * Additional data associated with this problem.
+     *
+     * @return a map of additional data
+     * @since 8.6
+     */
     AdditionalData getAdditionalData();
 
+    /**
+     * The number of aggregated problems.
+     *
+     * @return the number of aggregated problems.
+     * @since 8.6
+     */
     int getCount();
 
 }

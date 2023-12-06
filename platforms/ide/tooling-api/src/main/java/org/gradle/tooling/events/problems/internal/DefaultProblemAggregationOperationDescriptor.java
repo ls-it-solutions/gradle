@@ -25,15 +25,15 @@ import org.gradle.tooling.internal.protocol.events.InternalOperationDescriptor;
 import java.util.List;
 
 public class DefaultProblemAggregationOperationDescriptor extends DefaultOperationDescriptor implements ProblemAggregationDescriptor {
-    private final List<ProblemAggregation> summaries;
+    private final List<ProblemAggregation> aggregations;
 
-    public DefaultProblemAggregationOperationDescriptor(InternalOperationDescriptor internalDescriptor, OperationDescriptor parent, List<ProblemAggregation> summaries) {
+    public DefaultProblemAggregationOperationDescriptor(InternalOperationDescriptor internalDescriptor, OperationDescriptor parent, List<ProblemAggregation> aggregations) {
         super(internalDescriptor, parent);
-        this.summaries = summaries;
+        this.aggregations = aggregations;
     }
 
     @Override
-    public List<ProblemAggregation> getSummaries() {
-        return summaries;
+    public List<ProblemAggregation> getAggregations() {
+        return aggregations;
     }
 }

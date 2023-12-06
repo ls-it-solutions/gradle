@@ -223,8 +223,8 @@ class ProblemProgressEventCrossVersionTest extends ToolingApiSpecification {
 
         problems[0].label.label == "The 'standard-plugin' is deprecated"
         problems[0].details.details == null
-        problems[1].summaries.size() == 1
-        problems[1].summaries[0].label.label == "The 'standard-plugin' is deprecated"
+        problems[1].aggregations.size() == 1
+        problems[1].aggregations[0].label.label == "The 'standard-plugin' is deprecated"
     }
 
     class ProblemProgressListener implements ProgressListener {

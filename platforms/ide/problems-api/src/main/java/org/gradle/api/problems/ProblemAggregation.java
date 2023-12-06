@@ -26,5 +26,11 @@ import org.gradle.api.Incubating;
 @Incubating
 public interface ProblemAggregation extends Problem {
 
+    /**
+     * The number of aggregated problems.
+     * @return the number of aggregated problems.
+     *
+     * @since 8.6
+     */
     int getCount();
 }

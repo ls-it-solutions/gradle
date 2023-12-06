@@ -32,6 +32,7 @@ public interface ProblemAggregationDescriptor extends ProblemCommonDescriptor {
      * Returns the problem summary details.
      *
      * @return The problem summary details.
+     * @since 8.6
      */
-    List<ProblemAggregation> getSummaries();
+    List<ProblemAggregation> getAggregations();
 }
